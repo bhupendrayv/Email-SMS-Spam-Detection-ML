@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CyberGuard | AI Spam & Threat Detection System</title>
+  <link rel="stylesheet" href="static/style.css">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header>
+    <div class="logo-area">
+      <span style="font-size: 1.6rem;">🛡️</span>
+      <div>
+        <h1>CyberGuard AI</h1>
+        <small style="color: var(--text-secondary); font-size: 0.8rem; font-weight: 500;">SMS & Email Spam Detection System</small>
+      </div>
+    </div>
+    <div>
+      <button class="theme-toggle-btn" id="themeToggleBtn">
+        <span id="themeIcon">☀️</span> <span id="themeLabel">Light Mode</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Application Container -->
+  <main>
+    <!-- Navigation Tabs -->
+    <div class="tabs-nav">
+      <button class="tab-btn active" data-tab="tab-sms">📱 SMS</button>
+      <button class="tab-btn" data-tab="tab-email">✉️ Email</button>
+      <button class="tab-btn" data-tab="tab-phishing">🎣 Phishing</button>
+      <button class="tab-btn" data-tab="tab-url">🌐 URL Security</button>
+      <button class="tab-btn" data-tab="tab-dashboard">📊 Dashboard</button>
+      <button class="tab-btn" data-tab="tab-compare">🔬 Model Comparison</button>
+    </div>
+
+    <!-- ────────────────────────────────────────────────────────────────── -->
+    <!-- TAB 1: SMS SPAM DETECTION -->
+    <!-- ────────────────────────────────────────────────────────────────── -->
+    <div class="tab-pane active" id="tab-sms">
+      <div class="card">
+        <h2>SMS Spam Detection</h2>
+        <p class="desc">Identify unsolicited text messages, prize frauds, and aggressive subscription traps.</p>
+
+        <div class="form-group">
+          <label for="smsSelectSample">Pre-loaded Samples</label>
+          <select id="smsSelectSample">
+            <option value="">-- Choose a pre-loaded sample or type below --</option>
+            <option value="WINNER! You have won £1,000 cash or a guaranteed prize! Call 09061701461 to claim now!">Spam: Cash Prize / Lottery Call Scam</option>
+            <option value="URGENT! Your mobile account has unpaid charges. Reply STOP to cancel subscriptions.">Spam: Urgent Account Overdue Alert</option>
+            <option value="Hey! Are you free for coffee tomorrow afternoon around 3pm?">Ham: Casual Personal Message</option>
+            <option value="The team meeting has been rescheduled to Thursday at 10:00 AM in Conference Room B.">Ham: Corporate Work Schedule</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="smsInput">SMS Message Content</label>
+          <textarea id="smsInput" placeholder="Enter SMS text to analyze..."></textarea>
+        </div>
+
+        <div class="controls-row">
+          <div style="flex: 1;">
+            <label for="smsModelSelect">Model Architecture</label>
+            <select id="smsModelSelect">
+              <option value="svm_rbf">SVM (RBF Kernel) — High Accuracy & Precision</option>
+              <option value="linear_svm">Linear SVM — Ultra-low Latency</option>
+              <option value="multinomial_nb">Multinomial Naive Bayes</option>
+              <option value="logistic_regression">Logistic Regression</option>
+              <option value="random_forest">Random Forest Classifier</option>
+            </select>
+          </div>
+          <button class="btn-primary" id="checkSmsBtn">
+            <span class="spinner" id="smsSpinner"></span>
+            <span class="btn-text">Check SMS</span>
+          </button>
+        </div>
+
+        <div class="error-banner" id="smsError"></div>
+
+        <!-- Result Card -->
+        <div class="result-card" id="smsResultCard">
+          <div class="result-header">
+            <div class="verdict-badge" id="smsVerdictBadge"></div>
+            <span style="font-size: 0.85rem; font-weight: 600;" id="smsModelBadge"></span>
+          </div>
+
+          <div class="gauge-container">
+            <div class="gauge-label">
+              <span>Spam Threat Probability</span>
+              <span id="smsProbText">0%</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="smsProbFill"></div>
+            </div>
+          </div>
+
+          <div class="keywords-area" id="smsKeywordsArea">
+            <h4>Influencing Keywords & Triggers</h4>
+            <div class="chips-list" id="smsChipsList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────────────────────────────────────────────────────────────── -->
+    <!-- TAB 2: EMAIL SPAM DETECTION -->
+    <!-- ────────────────────────────────────────────────────────────────── -->
+    <div class="tab-pane" id="tab-email">
+      <div class="card">
+        <h2>Email Spam Classification (Subject + Body)</h2>
+        <p class="desc">Filter corporate spam, newsletters, fake invoices, and bulk marketing campaigns.</p>
+
+        <div class="form-group">
+          <label for="emailSubject">Email Subject</label>
+          <input type="text" id="emailSubject" placeholder="e.g. Action Required: Overdue payment notice">
+        </div>
+
+        <div class="form-group">
+          <label for="emailBody">Email Body</label>
+          <textarea id="emailBody" placeholder="Enter complete email message body here..."></textarea>
+        </div>
+
+        <div class="controls-row">
+          <button class="btn-primary" id="checkEmailBtn">
+            <span class="spinner" id="emailSpinner"></span>
+            <span class="btn-text">Check Email</span>
+          </button>
+        </div>
+
+        <div class="error-banner" id="emailError"></div>
+
+        <div class="result-card" id="emailResultCard">
+          <div class="result-header">
+            <div class="verdict-badge" id="emailVerdictBadge"></div>
+            <span style="font-size: 0.85rem; font-weight: 600;" id="emailModelBadge"></span>
+          </div>
+          <div class="gauge-container">
+            <div class="gauge-label">
+              <span>Spam Threat Probability</span>
+              <span id="emailProbText">0%</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="emailProbFill"></div>
+            </div>
+          </div>
+          <div class="keywords-area" id="emailKeywordsArea">
+            <h4>Influencing Keywords</h4>
+            <div class="chips-list" id="emailChipsList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────────────────────────────────────────────────────────────── -->
+    <!-- TAB 3: PHISHING EMAIL DETECTION -->
+    <!-- ────────────────────────────────────────────────────────────────── -->
+    <div class="tab-pane" id="tab-phishing">
+      <div class="card">
+        <h2>Phishing Email & Social-Engineering Inspection</h2>
+        <p class="desc">Deep heuristic scanning for urgency triggers, credential requests, link mismatches, and spoofing.</p>
+
+        <div class="form-group">
+          <label for="phishSubject">Subject</label>
+          <input type="text" id="phishSubject" value="Security Alert: Immediate Account Verification Required">
+        </div>
+
+        <div class="form-group">
+          <label for="phishBody">Email Content</label>
+          <textarea id="phishBody">Dear customer, your PayPal account has been restricted due to suspicious unauthorized activity. You must verify your banking password within 24 hours to prevent permanent deactivation. Click here to confirm credentials: http://192.168.1.10/login-verify.php</textarea>
+        </div>
+
+        <div class="controls-row">
+          <button class="btn-primary" id="checkPhishBtn">
+            <span class="spinner" id="phishSpinner"></span>
+            <span class="btn-text">Analyze Phishing Threat</span>
+          </button>
+        </div>
+
+        <div class="error-banner" id="phishError"></div>
+
+        <div class="result-card" id="phishResultCard">
+          <div class="result-header">
+            <div class="verdict-badge" id="phishVerdictBadge"></div>
+            <span style="font-size: 0.85rem; font-weight: 600;" id="phishRiskBadge"></span>
+          </div>
+          <div class="gauge-container">
+            <div class="gauge-label">
+              <span>Phishing Risk Score</span>
+              <span id="phishProbText">0%</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="phishProbFill"></div>
+            </div>
+          </div>
+          <div class="keywords-area">
+            <h4>Identified Threat Triggers</h4>
+            <div class="chips-list" id="phishChipsList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────────────────────────────────────────────────────────────── -->
+    <!-- TAB 4: MALICIOUS URL DETECTION -->
+    <!-- ────────────────────────────────────────────────────────────────── -->
+    <div class="tab-pane" id="tab-url">
+      <div class="card">
+        <h2>Malicious URL Scanner</h2>
+        <p class="desc">Evaluates character n-gram TF-IDF and structural lexical features (IP hostnames, dots, @ redirection, HTTPS).</p>
+
+        <div class="form-group">
+          <label for="urlInput">Target URL</label>
+          <input type="text" id="urlInput" value="http://paypal-security-update.com@account-check.xyz/login.php" placeholder="https://example.com/login">
+        </div>
+
+        <div class="controls-row">
+          <button class="btn-primary" id="checkUrlBtn">
+            <span class="spinner" id="urlSpinner"></span>
+            <span class="btn-text">Scan URL</span>
+          </button>
+        </div>
+
+        <div class="error-banner" id="urlError"></div>
+
+        <div class="result-card" id="urlResultCard">
+          <div class="result-header">
+            <div class="verdict-badge" id="urlVerdictBadge"></div>
+            <span style="font-size: 0.85rem; font-weight: 600;" id="urlModelBadge"></span>
+          </div>
+          <div class="gauge-container">
+            <div class="gauge-label">
+              <span>Malicious Probability</span>
+              <span id="urlProbText">0%</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="urlProbFill"></div>
+            </div>
+          </div>
+          <div class="keywords-area" id="urlLexicalDetails"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────────────────────────────────────────────────────────────── -->
+    <!-- TAB 5: ANALYTICS DASHBOARD -->
+    <!-- ────────────────────────────────────────────────────────────────── -->
+    <div class="tab-pane" id="tab-dashboard">
+      <!-- KPI Stats Grid -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="label">Total Inspected</span>
+          <span class="value" id="kpiTotal">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="label">Spam / Threats Flagged</span>
+          <span class="value" style="color: var(--spam-color);" id="kpiSpam">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="label">Legitimate (Ham)</span>
+          <span class="value" style="color: var(--ham-color);" id="kpiHam">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="label">Spam Ratio</span>
+          <span class="value" id="kpiRate">0%</span>
+        </div>
+      </div>
+
+      <!-- Charts Grid -->
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h3>📊 Threat Breakdown (Pie Chart)</h3>
+          <canvas id="chartPie" height="230"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>📈 Channel Volume Trajectory (Bar Chart)</h3>
+          <canvas id="chartChannel" height="230"></canvas>
+        </div>
+      </div>
+
+      <!-- History Table with Search and Filter -->
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+          <h2>Recent Inspection Audit Log</h2>
+          <div style="display: flex; gap: 0.5rem;">
+            <input type="text" id="tableSearchInput" placeholder="Search message content..." style="width: 220px; padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+            <select id="tableFilterType" style="width: 140px; padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+              <option value="ALL">All Channels</option>
+              <option value="SMS">SMS</option>
+              <option value="Email">Email</option>
+              <option value="Phishing">Phishing</option>
+              <option value="URL">URL</option>
+            </select>
+            <button class="btn-primary" id="refreshStatsBtn" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">🔄 Refresh</button>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table id="historyTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Time</th>
+                <th>Channel</th>
+                <th>Message Content</th>
+                <th>Verdict</th>
+                <th>Spam Probability</th>
+                <th>Model</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody">
+              <tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">Loading records...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────────────────────────────────────────────────────────────── -->
+    <!-- TAB 6: MODEL COMPARISON -->
+    <!-- ────────────────────────────────────────────────────────────────── -->
+    <div class="tab-pane" id="tab-compare">
+      <div class="card">
+        <h2>Empirical Benchmark: Bag-of-Words vs. TF-IDF</h2>
+        <p class="desc">Side-by-side performance metrics across 5 machine learning architectures evaluated on the held-out test split.</p>
+
+        <div class="charts-grid">
+          <div class="chart-card" style="grid-column: 1 / -1;">
+            <h3>📊 F1-Score: BoW vs TF-IDF by Model Architecture</h3>
+            <canvas id="chartModelComparison" height="120"></canvas>
+          </div>
+        </div>
+
+        <div class="table-wrapper" style="margin-top: 1.5rem;">
+          <table id="compareTable">
+            <thead>
+              <tr>
+                <th>Representation</th>
+                <th>Model Architecture</th>
+                <th>Accuracy</th>
+                <th>Precision</th>
+                <th>Recall (Spam)</th>
+                <th>F1-Score</th>
+                <th>ROC-AUC</th>
+                <th>Latency / Sample</th>
+              </tr>
+            </thead>
+            <tbody id="compareTableBody">
+              <tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">Loading benchmark leaderboard...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="static/app.js"></script>
+</body>
+</html>
+

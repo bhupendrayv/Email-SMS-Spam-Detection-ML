@@ -1,0 +1,65 @@
+# ============================================================
+# Email & SMS Spam Detection ML Project — .gitignore
+# ============================================================
+
+# --- Secrets & Environment ---
+.env
+*.env
+.env.*
+!.env.example
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+*.spec
+
+# --- Virtual Environments ---
+.venv/
+venv/
+env/
+ENV/
+
+# --- Jupyter Notebooks checkpoints ---
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# --- ML Models (large binary files — regenerate with train_ml.py) ---
+models/*.joblib
+
+# --- Database (auto-created at runtime) ---
+data/predictions.db
+*.db
+*.sqlite
+*.sqlite3
+
+# --- Raw Data (large CSV files) ---
+data/raw/
+
+# --- Logs & OS files ---
+*.log
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- IDE / Editor ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Pytest cache ---
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# --- Node (if any frontend build tools added later) ---
+node_modules/
