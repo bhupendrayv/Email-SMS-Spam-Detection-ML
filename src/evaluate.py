@@ -19,7 +19,13 @@ import argparse
 import json
 import os
 import sys
+import tempfile
 import time
+
+# Ensure matplotlib uses a writable temp cache directory to prevent startup warnings
+if "MPLCONFIGDIR" not in os.environ:
+    os.environ["MPLCONFIGDIR"] = tempfile.gettempdir()
+
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -97,8 +103,11 @@ def evaluate_single_model(
     elif hasattr(model, "decision_function"):
         try:
             scores = model.decision_function(X_test)
+            if hasattr(scores, "ndim") and scores.ndim == 2:
+                scores = scores[:, 1] if scores.shape[1] == 2 else scores.ravel()
             # Min-Max normalize decision function scores for safe ROC curve display
-            y_scores = (scores - scores.min()) / (scores.max() - scores.min() + 1e-9)
+            denom = scores.max() - scores.min()
+            y_scores = (scores - scores.min()) / (denom if denom != 0 else 1.0)
         except Exception:
             pass
 
@@ -114,7 +123,8 @@ def evaluate_single_model(
     fpr, tpr, _ = roc_curve(y_test, y_scores)
     roc_auc = float(auc(fpr, tpr))
 
-    cm = confusion_matrix(y_test, y_pred)
+    # Explicit labels=[0, 1] ensures a consistent 2x2 matrix with 4 elements
+    cm = confusion_matrix(y_test, y_pred, labels=[0, 1])
     tn, fp, fn, tp = [int(v) for v in cm.ravel()]
 
     return {
@@ -169,7 +179,7 @@ def plot_bow_vs_tfidf_bars(df_results: pd.DataFrame, output_path: Path):
         # Add values on top of bars
         for bar in ax.patches:
             h = bar.get_height()
-            if h > 0.05:
+            if h is not None and not np.isnan(h) and h > 0.05:
                 ax.annotate(f"{h:.3f}",
                             xy=(bar.get_x() + bar.get_width() / 2, h),
                             xytext=(0, 3), textcoords="offset points",
@@ -219,9 +229,13 @@ def write_recommendation_report(df_results: pd.DataFrame, output_path: Path) -> 
     """
     # Sort models by F1-score and Recall
     sorted_f1 = df_results.sort_values(by=["f1_score", "recall"], ascending=False)
+    if sorted_f1.empty:
+        return "# Evaluation Report\n\nNo models evaluated."
     best_overall = sorted_f1.iloc[0]
-    best_bow = df_results[df_results["representation"] == "BOW"].sort_values(by="f1_score", ascending=False).iloc[0]
-    best_tfidf = df_results[df_results["representation"] == "TFIDF"].sort_values(by="f1_score", ascending=False).iloc[0]
+    bow_subset = df_results[df_results["representation"] == "BOW"].sort_values(by="f1_score", ascending=False)
+    best_bow = bow_subset.iloc[0] if not bow_subset.empty else best_overall
+    tfidf_subset = df_results[df_results["representation"] == "TFIDF"].sort_values(by="f1_score", ascending=False)
+    best_tfidf = tfidf_subset.iloc[0] if not tfidf_subset.empty else best_overall
 
     report = f"""# 🏆 Comprehensive Evaluation & Model Recommendation Report
 

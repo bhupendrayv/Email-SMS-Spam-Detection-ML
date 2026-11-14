@@ -1,11 +1,11 @@
 representation,model_key,model_name,accuracy,precision,recall,f1_score,roc_auc,tn,fp,fn,tp,training_time_sec,total_inference_ms,latency_per_sample_ms
-BOW,multinomial_nb,Multinomial Naive Bayes,0.9845,0.9806,0.9018,0.9395,0.9731,723,2,11,101,11.09,0.84,0.001
-BOW,logistic_regression,Logistic Regression,0.9845,0.9806,0.9018,0.9395,0.9889,723,2,11,101,0.81,0.31,0.0004
-BOW,linear_svm,Linear SVM,0.9845,0.9806,0.9018,0.9395,0.9885,723,2,11,101,1.54,0.25,0.0003
-BOW,svm_rbf,SVM (RBF Kernel),0.9833,1.0,0.875,0.9333,0.9848,725,0,14,98,13.45,94.32,0.1127
-BOW,random_forest,Random Forest,0.9785,1.0,0.8393,0.9126,0.9932,725,0,18,94,15.4,79.39,0.0949
+BOW,multinomial_nb,Multinomial Naive Bayes,0.9845,0.9806,0.9018,0.9395,0.9731,723,2,11,101,11.09,1.01,0.0012
+BOW,logistic_regression,Logistic Regression,0.9845,0.9806,0.9018,0.9395,0.9889,723,2,11,101,0.81,0.25,0.0003
+BOW,linear_svm,Linear SVM,0.9845,0.9806,0.9018,0.9395,0.9885,723,2,11,101,1.54,0.23,0.0003
+BOW,svm_rbf,SVM (RBF Kernel),0.9833,1.0,0.875,0.9333,0.9848,725,0,14,98,13.45,91.05,0.1088
+BOW,random_forest,Random Forest,0.9785,1.0,0.8393,0.9126,0.9932,725,0,18,94,15.4,56.17,0.0671
 TFIDF,multinomial_nb,Multinomial Naive Bayes,0.9833,0.9804,0.8929,0.9346,0.9886,723,2,12,100,0.53,0.36,0.0004
-TFIDF,logistic_regression,Logistic Regression,0.9821,0.9369,0.9286,0.9327,0.9851,718,7,8,104,0.61,0.52,0.0006
-TFIDF,linear_svm,Linear SVM,0.9845,0.9806,0.9018,0.9395,0.9874,723,2,11,101,0.33,0.31,0.0004
-TFIDF,svm_rbf,SVM (RBF Kernel),0.9857,0.9808,0.9107,0.9444,0.9883,723,2,10,102,18.87,103.44,0.1236
-TFIDF,random_forest,Random Forest,0.9785,1.0,0.8393,0.9126,0.9919,725,0,18,94,15.39,62.58,0.0748
+TFIDF,logistic_regression,Logistic Regression,0.9821,0.9369,0.9286,0.9327,0.9851,718,7,8,104,0.61,0.25,0.0003
+TFIDF,linear_svm,Linear SVM,0.9845,0.9806,0.9018,0.9395,0.9874,723,2,11,101,0.33,0.27,0.0003
+TFIDF,svm_rbf,SVM (RBF Kernel),0.9857,0.9808,0.9107,0.9444,0.9883,723,2,10,102,18.87,102.79,0.1228
+TFIDF,random_forest,Random Forest,0.9785,1.0,0.8393,0.9126,0.9919,725,0,18,94,15.39,49.75,0.0594

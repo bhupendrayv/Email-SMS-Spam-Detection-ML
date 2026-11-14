@@ -635,7 +635,7 @@ def generate_synthetic_email(target: Path, n_ham: int = 2800, n_spam: int = 700)
         "URGENT: verify your account immediately",
         "FREE {topic} - limited time offer",
         "Lose weight FAST — guaranteed results",
-        "Make \${amount} per day working from home",
+        "Make ${amount} per day working from home",
         "Your order #{n} has shipped — confirm delivery",
         "Important security alert — action required",
         "Exclusive deal just for you — {n}% OFF",

@@ -7,7 +7,6 @@ Comprehensive Automated Test Suite:
 from __future__ import annotations
 
 import unittest
-from fastapi.testclient import TestClient
 from src.preprocess import Preprocessor, stratified_split_70_15_15
 from src.api import app, SMSRequest, EmailRequest, PhishingRequest, URLRequest
 from src.predict import SpamPredictor

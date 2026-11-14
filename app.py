@@ -15,8 +15,12 @@ from __future__ import annotations
 import datetime
 import os
 import sys
+import tempfile
 from pathlib import Path
 from typing import Dict, List
+
+if "MPLCONFIGDIR" not in os.environ:
+    os.environ["MPLCONFIGDIR"] = tempfile.gettempdir()
 
 import numpy as np
 import pandas as pd
@@ -183,7 +187,8 @@ if page == "⚡ Real-Time Threat Detector":
         if sms_sample == "Custom Text":
             sms_input = st.text_area("Enter SMS message content:", height=100, placeholder="Type or paste SMS here...")
         else:
-            sms_input = st.text_area("Enter SMS message content:", value=sms_sample.split(": ", 1)[1], height=100)
+            sample_val = sms_sample.split(": ", 1)[1] if ": " in sms_sample else sms_sample
+            sms_input = st.text_area("Enter SMS message content:", value=sample_val, height=100)
 
         if st.button("🚀 Analyze SMS", key="btn_sms"):
             if not sms_input.strip():
@@ -249,6 +254,8 @@ if page == "⚡ Real-Time Threat Detector":
         if st.button("🚀 Analyze Email", key="btn_email"):
             if not email_body.strip() and not email_sub.strip():
                 st.warning("Please provide an email subject or body.")
+            elif predictor is None:
+                st.error("Predictor model not available.")
             else:
                 res = predictor.predict_email(email_sub, email_body)
                 is_spam = res["is_spam"]
@@ -422,30 +429,36 @@ elif page == "📊 Analytics Dashboard":
 
     with col_chart1:
         st.subheader("📈 Threat Volume Trajectory")
-        daily_trends = history_df.groupby(["date", "prediction"]).size().reset_index(name="count")
-        fig_trend = px.line(
-            daily_trends,
-            x="date",
-            y="count",
-            color="prediction",
-            markers=True,
-            color_discrete_map={"Spam": "#e74c3c", "Legitimate (Ham)": "#2ecc71"},
-            title="Inspections Over Time by Class",
-        )
-        fig_trend.update_layout(height=350, margin=dict(l=20, r=20, t=40, b=20))
-        st.plotly_chart(fig_trend, use_container_width=True)
+        if not history_df.empty and "date" in history_df.columns:
+            daily_trends = history_df.groupby(["date", "prediction"]).size().reset_index(name="count")
+            fig_trend = px.line(
+                daily_trends,
+                x="date",
+                y="count",
+                color="prediction",
+                markers=True,
+                color_discrete_map={"Spam": "#e74c3c", "Legitimate (Ham)": "#2ecc71"},
+                title="Inspections Over Time by Class",
+            )
+            fig_trend.update_layout(height=350, margin=dict(l=20, r=20, t=40, b=20))
+            st.plotly_chart(fig_trend, use_container_width=True)
+        else:
+            st.info("No threat inspection history recorded yet.")
 
     with col_chart2:
         st.subheader("🥧 Threat Class Ratio")
-        fig_pie = px.pie(
-            values=[spam_count, ham_count],
-            names=["Spam / Malicious", "Legitimate (Ham)"],
-            color=["Spam / Malicious", "Legitimate (Ham)"],
-            color_discrete_map={"Spam / Malicious": "#e74c3c", "Legitimate (Ham)": "#2ecc71"},
-            hole=0.45,
-        )
-        fig_pie.update_layout(height=350, margin=dict(l=20, r=20, t=30, b=20))
-        st.plotly_chart(fig_pie, use_container_width=True)
+        if total_checked > 0:
+            fig_pie = px.pie(
+                values=[spam_count, ham_count],
+                names=["Spam / Malicious", "Legitimate (Ham)"],
+                color=["Spam / Malicious", "Legitimate (Ham)"],
+                color_discrete_map={"Spam / Malicious": "#e74c3c", "Legitimate (Ham)": "#2ecc71"},
+                hole=0.45,
+            )
+            fig_pie.update_layout(height=350, margin=dict(l=20, r=20, t=30, b=20))
+            st.plotly_chart(fig_pie, use_container_width=True)
+        else:
+            st.info("No threat class data available.")
 
     st.subheader("🕒 Recent Threat Log")
     st.dataframe(
@@ -551,21 +564,24 @@ elif page == "📁 Batch Message Scanner":
             text_col = st.selectbox("Select message text column:", batch_df.columns)
 
             if st.button("🚀 Classify Batch"):
-                with st.spinner("Processing batch messages..."):
-                    preds = []
-                    probs = []
-                    for t in batch_df[text_col]:
-                        r = predictor.predict(str(t))
-                        preds.append(r["prediction"])
-                        probs.append(r["spam_probability_pct"])
+                if predictor is None:
+                    st.error("Predictor model not available.")
+                else:
+                    with st.spinner("Processing batch messages..."):
+                        preds = []
+                        probs = []
+                        for t in batch_df[text_col]:
+                            r = predictor.predict(str(t))
+                            preds.append(r["prediction"])
+                            probs.append(r["spam_probability_pct"])
 
-                    batch_df["Prediction"] = preds
-                    batch_df["Spam_Probability_%"] = probs
+                        batch_df["Prediction"] = preds
+                        batch_df["Spam_Probability_%"] = probs
 
-                st.success("Batch classification complete!")
-                st.dataframe(batch_df.head(50), use_container_width=True)
+                    st.success("Batch classification complete!")
+                    st.dataframe(batch_df.head(50), use_container_width=True)
 
-                csv_bytes = batch_df.to_csv(index=False).encode("utf-8")
-                st.download_button("📥 Download Classified Results CSV", data=csv_bytes, file_name="classified_results.csv")
+                    csv_bytes = batch_df.to_csv(index=False).encode("utf-8")
+                    st.download_button("📥 Download Classified Results CSV", data=csv_bytes, file_name="classified_results.csv")
         except Exception as e:
             st.error(f"Error parsing uploaded file: {e}")

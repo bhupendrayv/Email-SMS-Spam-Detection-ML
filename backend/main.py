@@ -47,7 +47,8 @@ from pydantic import BaseModel, Field, HttpUrl, field_validator
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    force=True
 )
 logger = logging.getLogger("spam_detection_api")
 
@@ -118,6 +119,7 @@ if STATIC_DIR.exists():
 
 class SMSRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=5000, description="Raw SMS message text")
+    model_name: Optional[str] = Field(default="svm_rbf", description="Model architecture to use (e.g. svm_rbf, linear_svm, multinomial_nb, logistic_regression, random_forest)")
 
     @field_validator("text")
     def validate_text(cls, v: str) -> str:
@@ -220,6 +222,8 @@ def record_history_entry(channel: str, content: str, label: str, spam_prob: floa
 @app.get("/", tags=["Frontend"])
 def root():
     index_file = STATIC_DIR / "index.html"
+    if not index_file.exists():
+        index_file = PROJECT_ROOT / "frontend" / "index.html"
     if index_file.exists():
         return FileResponse(str(index_file))
     return {
@@ -230,6 +234,26 @@ def root():
     }
 
 
+@app.get("/style.css", include_in_schema=False)
+def get_css():
+    css_file = STATIC_DIR / "style.css"
+    if not css_file.exists():
+        css_file = PROJECT_ROOT / "frontend" / "style.css"
+    if css_file.exists():
+        return FileResponse(str(css_file), media_type="text/css")
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="style.css not found")
+
+
+@app.get("/app.js", include_in_schema=False)
+def get_js():
+    js_file = STATIC_DIR / "app.js"
+    if not js_file.exists():
+        js_file = PROJECT_ROOT / "frontend" / "app.js"
+    if js_file.exists():
+        return FileResponse(str(js_file), media_type="application/javascript")
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="app.js not found")
+
+
 @app.post(
     "/predict/sms",
     response_model=StandardPredictionResponse,
@@ -238,8 +262,21 @@ def root():
 )
 def predict_sms(request: SMSRequest):
     try:
-        predictor: SpamPredictor = ml_resources["predictor"]
-        res = predictor.predict(request.text)
+        predictor: Optional[SpamPredictor] = ml_resources.get("predictor")
+        if predictor is None:
+            predictor = SpamPredictor(model_name="svm_rbf", representation="tfidf")
+            ml_resources["predictor"] = predictor
+
+        # If a specific supported model was requested, dynamically load it or fallback
+        req_model = (request.model_name or "svm_rbf").lower().replace(" ", "_")
+        active_predictor = predictor
+        if req_model != getattr(predictor, "model_name", "svm_rbf"):
+            try:
+                active_predictor = SpamPredictor(model_name=req_model, representation="tfidf")
+            except Exception:
+                active_predictor = predictor
+
+        res = active_predictor.predict(request.text)
 
         spam_prob = float(res["spam_probability_pct"] / 100.0)
         confidence = float(res["confidence_pct"] / 100.0)
@@ -249,7 +286,8 @@ def predict_sms(request: SMSRequest):
             content=request.text,
             label=res["prediction"],
             spam_prob=spam_prob,
-            conf=confidence
+            conf=confidence,
+            model_used=f"{res.get('representation', 'TFIDF')} + {res.get('model_name', req_model)}"
         )
 
         return StandardPredictionResponse(
@@ -431,7 +469,7 @@ def get_model_comparison():
 
     return {
         "total_configurations_tested": len(records),
-        "best_model_overall": sorted(records, key=lambda x: x["f1_score"], reverse=True)[0],
+        "best_model_overall": sorted(records, key=lambda x: x["f1_score"], reverse=True)[0] if records else None,
         "all_models": records,
         "bow_leaderboard": sorted(bow_models, key=lambda x: x["f1_score"], reverse=True),
         "tfidf_leaderboard": sorted(tfidf_models, key=lambda x: x["f1_score"], reverse=True)

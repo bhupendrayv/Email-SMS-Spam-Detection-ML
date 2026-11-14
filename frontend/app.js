@@ -4,8 +4,19 @@
  * unified API prediction calls, audit history filtering, and real-time alerts.
  */
 
-// Global API Base URL (Relative for smooth self-hosted deployment)
-const API_BASE = "";
+// Global API Base URL (Relative for smooth self-hosted deployment, with fallback when served from local files or alternate ports)
+const API_BASE = window.API_BASE || (window.location.protocol === "file:" || (window.location.port && window.location.port !== "8000") ? "http://localhost:8000" : "");
+
+// Utility to escape HTML entities to prevent attribute injection and XSS
+function escapeHtml(str) {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 
 // Chart.js global instances
 let chartPieInstance = null;
@@ -128,6 +139,8 @@ function setupEventListeners() {
 
 async function handleSmsCheck() {
   const text = document.getElementById("smsInput").value.trim();
+  const modelSelect = document.getElementById("smsModelSelect");
+  const model_name = modelSelect ? modelSelect.value : "svm_rbf";
   const spinner = document.getElementById("smsSpinner");
   const errorBox = document.getElementById("smsError");
   const resultCard = document.getElementById("smsResultCard");
@@ -144,7 +157,7 @@ async function handleSmsCheck() {
     const res = await fetch(`${API_BASE}/predict/sms`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text })
+      body: JSON.stringify({ text, model_name })
     });
 
     if (!res.ok) {
@@ -325,18 +338,19 @@ function renderResultCard({ resultCardId, badgeId, modelBadgeId, probTextId, fil
 
   // Update verdict
   if (isPhishingTab && data.details && data.details.verdict) {
-    badge.innerHTML = data.details.verdict;
-    modelBadge.textContent = `Risk Score: ${data.details.risk_score} / 100`;
+    badge.innerHTML = escapeHtml(data.details.verdict);
+    modelBadge.textContent = `Risk Score: ${data.details.risk_score ?? "N/A"} / 100`;
   } else if (isUrlTab && data.details && data.details.verdict) {
-    badge.innerHTML = data.details.verdict;
-    modelBadge.textContent = `Lexical Risk: ${data.details.lexical_features.heuristic_risk_score} / 100`;
+    badge.innerHTML = escapeHtml(data.details.verdict);
+    const lexRisk = data.details.lexical_features?.heuristic_risk_score ?? "N/A";
+    modelBadge.textContent = `Lexical Risk: ${lexRisk} / 100`;
   } else {
     badge.innerHTML = isSpam ? "🚨 SPAM DETECTED" : "✅ LEGITIMATE (HAM)";
-    modelBadge.textContent = `Model: ${data.model_used}`;
+    modelBadge.textContent = `Model: ${escapeHtml(data.model_used || "Unknown")}`;
   }
 
   // Update gauge
-  probText.textContent = `${probPct}% (Confidence: ${Math.round(data.confidence * 100)}%)`;
+  probText.textContent = `${probPct}% (Confidence: ${Math.round((data.confidence || 0) * 100)}%)`;
   fillBar.style.width = `${probPct}%`;
 
   // Render keywords / details
@@ -345,8 +359,8 @@ function renderResultCard({ resultCardId, badgeId, modelBadgeId, probTextId, fil
     const lex = data.details.lexical_features;
     chipsList.innerHTML = `
       <div style="font-size: 0.85rem; line-height: 1.6; margin-top: 0.5rem; color: var(--text-primary);">
-        <div>• <strong>Hostname:</strong> ${lex.hostname}</div>
-        <div>• <strong>Length:</strong> ${lex.url_length} chars | <strong>Subdomain Dots:</strong> ${lex.num_dots}</div>
+        <div>• <strong>Hostname:</strong> ${escapeHtml(lex.hostname || "N/A")}</div>
+        <div>• <strong>Length:</strong> ${Number(lex.url_length || 0)} chars | <strong>Subdomain Dots:</strong> ${Number(lex.num_dots || 0)}</div>
         <div>• <strong>IP Link:</strong> ${lex.has_ip_address ? "🚨 Yes" : "No"} | <strong>@ Symbol:</strong> ${lex.has_at_symbol ? "🚨 Yes" : "No"}</div>
         <div>• <strong>HTTPS:</strong> ${lex.has_https ? "✅ Secure" : "⚠️ Missing"}</div>
       </div>
@@ -354,9 +368,10 @@ function renderResultCard({ resultCardId, badgeId, modelBadgeId, probTextId, fil
   } else if (data.top_keywords && data.top_keywords.length > 0) {
     data.top_keywords.forEach(kw => {
       const chip = document.createElement("span");
-      const isNegative = kw.score > 0 || kw.sentiment.includes("Spam") || kw.sentiment.includes("Trigger") || kw.sentiment.includes("Credential");
+      const sentiment = String(kw.sentiment || "");
+      const isNegative = (kw.score || 0) > 0 || sentiment.includes("Spam") || sentiment.includes("Trigger") || sentiment.includes("Credential");
       chip.className = `chip ${isNegative ? "spam-chip" : "ham-chip"}`;
-      chip.textContent = `${kw.word} (${kw.score > 0 ? "+" : ""}${kw.score})`;
+      chip.textContent = `${kw.word} (${(kw.score || 0) > 0 ? "+" : ""}${kw.score})`;
       chipsList.appendChild(chip);
     });
   } else {
@@ -477,26 +492,31 @@ function renderHistoryTable(records) {
   records.forEach(r => {
     const isSpam = r.prediction === "Spam";
     const tr = document.createElement("tr");
+    const msg = String(r.message_text || "");
     tr.innerHTML = `
       <td>#${r.id}</td>
-      <td style="white-space: nowrap; font-size: 0.8rem; color: var(--text-secondary);">${r.timestamp}</td>
-      <td><span style="font-weight: 600;">${r.type}</span></td>
-      <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${r.message_text}">${r.message_text}</td>
-      <td><span class="badge ${isSpam ? "badge-spam" : "badge-ham"}">${r.prediction}</span></td>
-      <td>${Math.round(r.probability * 100)}%</td>
-      <td style="font-size: 0.8rem; color: var(--text-secondary);">${r.model_used}</td>
+      <td style="white-space: nowrap; font-size: 0.8rem; color: var(--text-secondary);">${escapeHtml(r.timestamp || "")}</td>
+      <td><span style="font-weight: 600;">${escapeHtml(r.type || "")}</span></td>
+      <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(msg)}">${escapeHtml(msg)}</td>
+      <td><span class="badge ${isSpam ? "badge-spam" : "badge-ham"}">${escapeHtml(r.prediction || "")}</span></td>
+      <td>${Math.round((r.probability || 0) * 100)}%</td>
+      <td style="font-size: 0.8rem; color: var(--text-secondary);">${escapeHtml(r.model_used || "")}</td>
     `;
     tbody.appendChild(tr);
   });
 }
 
 function filterHistoryTable() {
-  const query = document.getElementById("tableSearchInput").value.toLowerCase();
-  const filterType = document.getElementById("tableFilterType").value;
+  const searchEl = document.getElementById("tableSearchInput");
+  const filterEl = document.getElementById("tableFilterType");
+  const query = (searchEl ? searchEl.value : "").toLowerCase().trim();
+  const filterType = filterEl ? filterEl.value : "ALL";
 
   const filtered = allHistoryRecords.filter(r => {
-    const matchesQuery = r.message_text.toLowerCase().includes(query) || (r.user_feedback && r.user_feedback.toLowerCase().includes(query));
-    const matchesType = filterType === "ALL" || r.type.toUpperCase() === filterType.toUpperCase();
+    const msgText = String(r.message_text || "").toLowerCase();
+    const userFb = String(r.user_feedback || "").toLowerCase();
+    const matchesQuery = !query || msgText.includes(query) || userFb.includes(query);
+    const matchesType = filterType === "ALL" || String(r.type || "").toUpperCase() === filterType.toUpperCase();
     return matchesQuery && matchesType;
   });
 
@@ -519,17 +539,18 @@ async function loadComparisonData() {
     const tbody = document.getElementById("compareTableBody");
     tbody.innerHTML = "";
 
-    models.sort((a, b) => b.f1_score - a.f1_score).forEach(m => {
+    models.sort((a, b) => (b.f1_score || 0) - (a.f1_score || 0)).forEach(m => {
       const tr = document.createElement("tr");
+      const rep = String(m.representation || "");
       tr.innerHTML = `
-        <td><strong style="color: ${m.representation === 'TFIDF' ? '#e67e22' : '#3498db'};">${m.representation}</strong></td>
-        <td>${m.model_name}</td>
-        <td>${(m.accuracy * 100).toFixed(2)}%</td>
-        <td>${(m.precision * 100).toFixed(2)}%</td>
-        <td><strong>${(m.recall * 100).toFixed(2)}%</strong></td>
-        <td><strong>${m.f1_score.toFixed(4)}</strong></td>
-        <td>${m.roc_auc.toFixed(4)}</td>
-        <td style="font-size: 0.8rem;">${m.latency_per_sample_ms} ms</td>
+        <td><strong style="color: ${rep === 'TFIDF' ? '#e67e22' : '#3498db'};">${escapeHtml(rep)}</strong></td>
+        <td>${escapeHtml(m.model_name || "")}</td>
+        <td>${((m.accuracy || 0) * 100).toFixed(2)}%</td>
+        <td>${((m.precision || 0) * 100).toFixed(2)}%</td>
+        <td><strong>${((m.recall || 0) * 100).toFixed(2)}%</strong></td>
+        <td><strong>${(m.f1_score || 0).toFixed(4)}</strong></td>
+        <td>${(m.roc_auc || 0).toFixed(4)}</td>
+        <td style="font-size: 0.8rem;">${m.latency_per_sample_ms ?? 0} ms</td>
       `;
       tbody.appendChild(tr);
     });
